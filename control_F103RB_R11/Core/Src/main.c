@@ -33,13 +33,14 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 #define EOT		0x0d   // '\r'  0x0d
-// #define DEBUGPORT	huart1		// default huart1
+#define DEBUGPORT	huart1		// default huart1
 #define COMMUART	USART2		// default USART2
 #define COMMPORT	huart2    // default huart2
 #define COMMDATA	rx2_data	// default rx2_data
 #define	ALIVE_PRIOD	180
 #define REPORT_DOOR 1
 #define	REPORT_CMD	0
+#define SOL_LOCK
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -543,7 +544,7 @@ void command_parsing(char *str_ptr) {
 #endif
 		HAL_Delay(1000);	// 1s delay for unlock operation
 		strcpy(Bstate.lock, "0,");  // 占쏙옙占쏙옙 占쏙옙占쏙옙
-		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);  // LED2 Off
 
 		Report_to_Server(REPORT_CMD);
 
@@ -562,7 +563,7 @@ void command_parsing(char *str_ptr) {
 
 		HAL_Delay(1000);	// 1s delay for lock operation
 		strcpy(Bstate.lock, "1,");  // 占쏙옙占쏙옙 占쏙옙占쏙옙
-		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);	// LED2 On
 
 		Report_to_Server(REPORT_CMD);
 
@@ -682,49 +683,35 @@ void Report_to_Server(int report_path) {
 }
 
 void Rfid_Scanning(int speed) {
-	uint8_t i = 0;
+	// uint8_t i = 0;
 
 	printf(" scanning...... \r\n");
 	strcpy(Bstate.scan, "1,");
 	Report_to_Server(REPORT_CMD);
 
+	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);		// SCAN LED ON
 
-
-	///do{
-		HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW direction
-		HAL_Delay(100);
-		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);		// SCAN LED ON
-	//} while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);
-
-
-		while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);
-
-
-	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CW direction
-	HAL_Delay(1);
-	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);  // AC Motor Power on
-
-			// for test
-	/*		HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW direction
-			HAL_Delay(100);
-			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-			HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);		// SCAN LED ON
-
-			HAL_Delay(1500);
-	*/
-
-/*
-	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW direction
-	HAL_Delay(500);
+	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW direction
+	HAL_Delay(10);
 	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-*/
+	while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);
+
 
 	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
-	HAL_Delay(100);
+	// HAL_Delay(10);
+	// HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW direction
+	while(HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET);
+
+	// HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW direction
+	// HAL_Delay(10);
+	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
+
+	HAL_Delay(300);
+
+	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
+	HAL_Delay(10);
 	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW direction
 
-	HAL_Delay(2000);
 	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);		// SCAN LED Off
 
 

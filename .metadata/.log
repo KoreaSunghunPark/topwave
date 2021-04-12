@@ -1,0 +1,22 @@
+!SESSION 2021-03-24 17:48:47.902 -----------------------------------------------
+eclipse.buildId=Version 1.6.0
+java.version=11.0.9.1
+java.vendor=AdoptOpenJDK
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  C:\Users\giya7\OneDrive\Develop\STM32_Project\control_bd_rev02\.cproject
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 C:\Users\giya7\OneDrive\Develop\STM32_Project\control_bd_rev02\.cproject
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2021-03-24 17:49:33.916
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2021-03-24 17:49:34.010
+!MESSAGE Log4j initialized with config file C:\Users\giya7\OneDrive\Develop\STM32_Project\.metadata\.log4j.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2021-03-24 17:49:36.775
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 4 4 2021-03-24 17:49:43.038
+!MESSAGE com.st.stm32cube.ide.mcu.ide/META-INF/version/build_ref file not found, build reference will not be reported into properties
+
+!ENTRY org.eclipse.cdt.core 1 0 2021-03-24 17:49:45.632
+!MESSAGE Indexed 'control_bd_rev02' (33 sources, 117 headers) in 4.98 sec: 9,776 declarations; 47,912 references; 6 unresolved inclusions; 321 syntax errors; 3,721 unresolved names (6.1%)
