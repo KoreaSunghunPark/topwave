@@ -688,43 +688,40 @@ void Rfid_Scanning(int speed) {
 	printf(" scanning...... \r\n");
 	strcpy(Bstate.scan, "1,");
 	Report_to_Server(REPORT_CMD);
+	HAL_Delay(3000);		// wait for operating RFID Reader
 
 	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);		// SCAN LED ON
 
-	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW direction
+	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW(UP) direction
 	HAL_Delay(10);
 	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-	while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);
+	while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
 
 
 	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
-	// HAL_Delay(10);
-	// HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW direction
-	while(HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET);
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW(DOWN) direction
+	HAL_Delay(1500);													// delay 3s --> 1.5s
 
-	// HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW direction
-	// HAL_Delay(10);
+
 	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
+	while(HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET);		// Bottom position
 
-	HAL_Delay(300);
+	// HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW(UP) direction
+	// HAL_Delay(10);
+	// HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
+	// HAL_Delay(300);
 
 	HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
+
+
 	HAL_Delay(10);
-	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW direction
+	HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW(UP) direction
 
 	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);		// SCAN LED Off
 
 
-	/*
-	for (i = 0; i < (speed * 2); ++i) {
-		HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
-		HAL_Delay(500);
-		HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
-		HAL_Delay(500);
-	}
-	*/
-
-	strcpy(Bstate.scan, "0,");  // 占쏙옙占쏙옙 占쏙옙占쏙옙, 占쏙옙캔 占쏙옙...
+	strcpy(Bstate.scan, "0,");  // end of scan
 	printf(" scan is completed!!\r\n");
 }
 
