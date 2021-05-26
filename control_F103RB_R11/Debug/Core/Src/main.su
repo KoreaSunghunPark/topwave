@@ -13,5 +13,5 @@ main.c:639:6:Report_to_Server	48	static
 main.c:686:6:Rfid_Scanning	16	static
 main.c:780:6:HAL_UART_RxCpltCallback	16	static
 main.c:797:6:HAL_TIM_PeriodElapsedCallback	16	static
-main.c:809:6:HAL_GPIO_EXTI_Callback	16	static
-main.c:826:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:811:6:HAL_GPIO_EXTI_Callback	16	static
+main.c:828:6:Error_Handler	4	static,ignoring_inline_asm

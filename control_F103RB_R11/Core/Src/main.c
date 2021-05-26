@@ -207,9 +207,9 @@ int main(void)
 				Rxcplt_flag = 0;
 			}   // end if(Rxcplt_flag == 1)
 
-			if (time_second >= ALIVE_PRIOD)
+	/*		if (time_second >= ALIVE_PRIOD)
 				check_tablet_alive(3);
-
+	*/
 			if (door_check_enable == 1)
 				check_door();
     /* USER CODE END WHILE */
@@ -542,7 +542,7 @@ void command_parsing(char *str_ptr) {
 		HAL_GPIO_WritePin(SOL_LOCK1_GPIO_Port, SOL_LOCK1_Pin, GPIO_PIN_RESET); // lock SOL_LOCK1 ---> Unlock of EM Lock
 		HAL_GPIO_WritePin(SOL_LOCK2_GPIO_Port, SOL_LOCK2_Pin, GPIO_PIN_RESET); // lock SOL_LOCK2 ---> Unlock of EM Lock
 #endif
-		HAL_Delay(1000);	// 1s delay for unlock operation
+	//	HAL_Delay(1000);	// 1s delay for unlock operation
 		strcpy(Bstate.lock, "0,");  // 占쏙옙占쏙옙 占쏙옙占쏙옙
 		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);  // LED2 Off
 
@@ -561,7 +561,7 @@ void command_parsing(char *str_ptr) {
 		HAL_GPIO_WritePin(SOL_LOCK2_GPIO_Port, SOL_LOCK2_Pin, GPIO_PIN_SET); // unlock SOL_LOCK2  ---> Lock of EM Lock
 #endif
 
-		HAL_Delay(1000);	// 1s delay for lock operation
+	//	HAL_Delay(1000);	// 1s delay for lock operation
 		strcpy(Bstate.lock, "1,");  // 占쏙옙占쏙옙 占쏙옙占쏙옙
 		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);	// LED2 On
 
@@ -697,7 +697,7 @@ void Rfid_Scanning(int speed) {
 
 	if(speed != 0) {  // first normal scanning
 
-		HAL_Delay(1000);		// wait 1s for operating RFID Reader
+		HAL_Delay(2000);		// wait 2s for operating RFID Reader
 		HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW(UP) direction
 		HAL_Delay(10);
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
@@ -705,7 +705,7 @@ void Rfid_Scanning(int speed) {
 
 
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
-		HAL_Delay(2000);
+		HAL_Delay(1000);
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 		while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
 
@@ -713,7 +713,7 @@ void Rfid_Scanning(int speed) {
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 		HAL_Delay(10);
 		HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW(DOWN) direction
-		HAL_Delay(1500);													// delay 3s --> 1.5s
+		HAL_Delay(1000);													// delay 3s --> 1.5s
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 
 
@@ -737,17 +737,17 @@ void Rfid_Scanning(int speed) {
 
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
-			HAL_Delay(2000);
+			HAL_Delay(1000);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
-			HAL_Delay(2000);
+			HAL_Delay(1000);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
-			HAL_Delay(2000);
+			HAL_Delay(1000);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
 
@@ -756,7 +756,7 @@ void Rfid_Scanning(int speed) {
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 			HAL_Delay(10);
 			HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW(DOWN) direction
-			HAL_Delay(1500);													// delay 3s --> 1.5s
+			HAL_Delay(1000);													// delay 3s --> 1.5s
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 
 
@@ -795,12 +795,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Instance == TIM4) {
+	/* if (htim->Instance == TIM4) {
 		time_second++;
 		// HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
 		// printf(" alive_call_fail: %d,  time: %d\r\n", alive_call_fail, time_second);
 		// CDC_Transmit_FS("CDC_TX test...\r\n", sizeof("CDC_TX test...\r\n"));  // test only
-	}
+	} */
+
+
 	if (htim->Instance == TIM3) {
 		door_check_enable = 1;
 	}

@@ -24,7 +24,7 @@ void setup() {
 //  bluetooth1.begin(115200);
   bluetooth1.begin(115200, SERIAL_8N1, 21, 22); //추가로 사용할 시리얼. RX:21 / TX:22번 핀 사용
     
-  SerialBT.begin("ESP32test"); //Bluetooth device name
+  SerialBT.begin("FOODBOX"); //Bluetooth device name
   Serial.println("The device started, now you can pair it with bluetooth!");
 }
 
