@@ -114,7 +114,7 @@ static void MX_TIM3_Init(void);
 
 void Report_to_Server(int report_path);
 void Rfid_Scanning(int speed);		// unit: seconds
-void check_tablet_alive(int max_trying_count);
+// void check_tablet_alive(int max_trying_count);
 void check_door(void);
 void command_parsing(char *str_ptr);
 /* USER CODE END PFP */
@@ -616,7 +616,7 @@ void check_door(void) {
 		door_check++;
 
 }
-
+/*
 void check_tablet_alive(int max_trying_count) {
 	CDC_Transmit_FS((uint8_t*) "callme\r", (uint16_t) strlen("callme\r"));
 	HAL_UART_Transmit(&COMMPORT, (uint8_t*) "callme\r", (uint16_t) strlen("callme\r"), 0xFFFFFFFF);
@@ -635,6 +635,7 @@ void check_tablet_alive(int max_trying_count) {
 		PAD_boot_flag = 0;
 	}
 }
+*/
 
 void Report_to_Server(int report_path) {
 	int total = 0, sum = 0;
@@ -694,21 +695,19 @@ void Rfid_Scanning(int speed) {
 
 	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);		// SCAN LED ON
 
-
+	time_second = 0;
 	if(speed != 0) {  // first normal scanning
-
 		HAL_Delay(2000);		// wait 2s for operating RFID Reader
 		HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW(UP) direction
 		HAL_Delay(10);
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-		while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
+		while((HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Top position?
 
 
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 		HAL_Delay(1000);
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-		while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
-
+		while((HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Top position?
 
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 		HAL_Delay(10);
@@ -717,7 +716,7 @@ void Rfid_Scanning(int speed) {
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 
 
-		while(HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET);		// Bottom position
+		while((HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Bottom position
 
 		HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 
@@ -732,35 +731,35 @@ void Rfid_Scanning(int speed) {
 			HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_RESET);	// CW(UP) direction
 			HAL_Delay(10);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
+			while((HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Top position?
 
 
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 			HAL_Delay(1000);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
+			while((HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Top position?
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 			HAL_Delay(1000);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
+			while((HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Top position?
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 			HAL_Delay(1000);
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
-			while(HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET);		// Top position?
+			while((HAL_GPIO_ReadPin(EI5_TLIMIT_GPIO_Port, EI5_TLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Top position?
 
 
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 			HAL_Delay(10);
 			HAL_GPIO_WritePin(AC_M_FWD_GPIO_Port, AC_M_FWD_Pin, GPIO_PIN_SET);	// CCW(DOWN) direction
-			HAL_Delay(1000);													// delay 3s --> 1.5s
+			HAL_Delay(1000);													// delay 1s
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_RESET);  // AC Motor Power on
 
 
-			while(HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET);		// Bottom position
+			while((HAL_GPIO_ReadPin(EI3_BLIMIT_GPIO_Port, EI3_BLIMIT_Pin) == GPIO_PIN_SET) && time_second < 20);		// Bottom position
 
 			HAL_GPIO_WritePin(AC_M_ON_GPIO_Port, AC_M_ON_Pin, GPIO_PIN_SET);	// AC Motor Power off
 
@@ -771,10 +770,16 @@ void Rfid_Scanning(int speed) {
 	}
 
 
+	if(time_second <= 20 ) {
 	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);		// SCAN LED Off
-
-	strcpy(Bstate.scan, "0,");  // end of scan
-	printf(" scan is completed!!\r\n");
+		strcpy(Bstate.scan, "0,");  // end of scan
+		printf(" scan is completed!!\r\n");
+	} else
+	{
+		// strcpy(Bstate.scan, "1,");  // Motor operation is fail
+		printf(" Motor operation is fail!!\r\n");
+		// while(1);
+	}
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
@@ -801,7 +806,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		// printf(" alive_call_fail: %d,  time: %d\r\n", alive_call_fail, time_second);
 		// CDC_Transmit_FS("CDC_TX test...\r\n", sizeof("CDC_TX test...\r\n"));  // test only
 	} */
+	if (htim->Instance == TIM4) {
+		time_second++;
+		printf(" current time: %d\r\n", time_second);
 
+	}
 
 	if (htim->Instance == TIM3) {
 		door_check_enable = 1;
