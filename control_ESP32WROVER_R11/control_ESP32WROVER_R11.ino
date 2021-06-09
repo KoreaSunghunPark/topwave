@@ -10,24 +10,129 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiMulti.h>
+// #include <WiFiMulti.h>
 
+// webserver
+#include <WebServer.h>
+
+// HTTP OTA
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
 
+//mdns
+#include <ESPmDNS.h>
+
 // OTA지원을 위한 버젼 관리
-String version="Current: ctrl_esp32wrover_r1";
+String version="ctrl_esp32wrover_r01";
 String nextVersion="ctrl_esp32wrover_rxx.bin";
 
-WiFiMulti wifiMulti;
+// WiFiMulti wifiMulti;
 
 //how many clients should be able to telnet to this ESP32
 #define MAX_SRV_CLIENTS 3
-const char* ssid = "topwave";
-const char* password = "33553355";
 
+char* password = "33553355";
+char ssid[64];
+// mdns
+const char* host = "foodbox";
+
+// const char* ssid = "topwave";
+// const char* password = "33553355";
+
+
+// telnet
 WiFiServer server(23);
 WiFiClient serverClients[MAX_SRV_CLIENTS];
+
+// http
+WebServer httpserver(80);
+
+/*
+ * Login page
+ */
+
+const char* loginIndex = 
+ "<form name='loginForm'>"
+    "<table width='20%' bgcolor='A09F9F' align='center'>"
+        "<tr>"
+            "<td colspan=2>"
+                "<center><font size=4><b>FOODBOX</b></font></center>"
+                "<br>"
+            "</td>"
+            "<br>"
+            "<br>"
+        "</tr>"
+        "<td>Username:</td>"
+        "<td><input type='text' size=25 name='userid'><br></td>"
+        "</tr>"
+        "<br>"
+        "<br>"
+        "<tr>"
+            "<td>Password:</td>"
+            "<td><input type='Password' size=25 name='pwd'><br></td>"
+            "<br>"
+            "<br>"
+        "</tr>"
+        "<tr>"
+            "<td><input type='submit' onclick='check(this.form)' value='Login'></td>"
+        "</tr>"
+    "</table>"
+"</form>"
+"<script>"
+    "function check(form)"
+    "{"
+    "if(form.userid.value=='admin' && form.pwd.value=='3355')"
+    "{"
+    "window.open('/serverIndex')"
+    "}"
+    "else"
+    "{"
+    " alert('Error Password or Username')/*displays error message*/"
+    "}"
+    "}"
+"</script>";
+ 
+/*
+ * Server Index Page
+ */
+ 
+const char* serverIndex = 
+"<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+"<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+   "<input type='file' name='update'>"
+        "<input type='submit' value='Update'>"
+    "</form>"
+ "<div id='prg'>progress: 0%</div>"
+ "<script>"
+  "$('form').submit(function(e){"
+  "e.preventDefault();"
+  "var form = $('#upload_form')[0];"
+  "var data = new FormData(form);"
+  " $.ajax({"
+  "url: '/update',"
+  "type: 'POST',"
+  "data: data,"
+  "contentType: false,"
+  "processData:false,"
+  "xhr: function() {"
+  "var xhr = new window.XMLHttpRequest();"
+  "xhr.upload.addEventListener('progress', function(evt) {"
+  "if (evt.lengthComputable) {"
+  "var per = evt.loaded / evt.total;"
+  "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+  "}"
+  "}, false);"
+  "return xhr;"
+  "},"
+  "success:function(d, s) {"
+  "console.log('success!')" 
+ "},"
+ "error: function (a, b, c) {"
+ "}"
+ "});"
+ "});"
+ "</script>";
+
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -55,7 +160,7 @@ int door_check = 0;
 
 void serialProc();
 void chk_interrupt();
-void check_door();
+void check_door(); 
 
 
 // gpio 포트 선언
@@ -74,6 +179,11 @@ void IRAM_ATTR onTimer() {
   interruptCounter=true;
   }
 
+// wifi setup - auto scan & connection
+void wifi_scan_connection();
+
+// write to telnet
+void debuglog_telnet(char* msg);
 
 void setup() {
   // interrupt_init
@@ -104,11 +214,71 @@ void setup() {
   Serial.begin(115200);     // default 디버그용 시리얼
   bluetooth1.begin(115200, SERIAL_8N1, 21, 22); //추가로 사용할 시리얼. RX:21 / TX:22번 핀 사용
     
-  SerialBT.begin("ESP32bkmoonW"); //Bluetooth device name  블루투스 시리얼 통신 선언
+  SerialBT.begin("foodbox"); //Bluetooth device name  블루투스 시리얼 통신 선언
   Serial.println("The device started, now you can pair it with bluetooth!");
 
+  // wifi setup - auto scan & connection
+  // Set WiFi to station mode and disconnect from an AP if it was previously connected
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  delay(100);
+  Serial.println("Setup done");
 
-//  wifi setup
+  wifi_scan_connection();   // foodbox AP에 자동 접속
+
+  
+  /*use mdns for host name resolution*/
+  if (!MDNS.begin(host)) { //http://foodbox.local
+    Serial.println("Error setting up MDNS responder!");
+    while (1) {
+      delay(1000);
+    }
+  }
+  
+  Serial.println("mDNS responder started");
+
+// http server(80)
+ /*return index page which is stored in serverIndex */
+  httpserver.on("/", HTTP_GET, []() {
+    httpserver.sendHeader("Connection", "close");
+    httpserver.send(200, "text/html", loginIndex);
+  });
+  httpserver.on("/serverIndex", HTTP_GET, []() {
+    httpserver.sendHeader("Connection", "close");
+    httpserver.send(200, "text/html", serverIndex);
+  });
+  /*handling uploading firmware file */
+  httpserver.on("/update", HTTP_POST, []() {
+    httpserver.sendHeader("Connection", "close");
+    httpserver.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  }, []() {
+    HTTPUpload& upload = httpserver.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+      Serial.printf("Update: %s\n", upload.filename.c_str());
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      /* flashing firmware to ESP*/
+      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (Update.end(true)) { //true to set the size to the current progress
+        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
+  httpserver.begin();
+  Serial.println("OTA Http WebUpdater is enabled!");
+
+  
+
+/*
+//  wifi setup - multi connection
   Serial.println("\nConnecting");
 
   WiFi.mode(WIFI_STA);
@@ -135,6 +305,7 @@ void setup() {
     delay(1000);
     ESP.restart();
   }
+*/
 
   //start UART and the server
   // Serial2.begin(9600);
@@ -151,11 +322,13 @@ void setup() {
 
 void ota() {
   
-  Serial.println("firmware version check for OTA");   
+  Serial.println("");
+  Serial.println("firmware version check for OTA");
+  Serial.print("Current version: ");   
   Serial.println(version);
 
+  Serial.print("Target: ");
   String updateAddr="http://192.168.0.27/"+nextVersion;
-
   Serial.println(updateAddr);
   
   t_httpUpdate_return ret = httpUpdate.update(serverClients[0], updateAddr);
@@ -182,21 +355,18 @@ void loop() {
   uint8_t i;
 
   // put your main code here, to run repeatedly:
-
+  httpserver.handleClient();
   serialProc();
-
+  
 
   if (interruptCounter) { 
         // Serial.println("100 msec");
         interruptCounter=false;
         check_door();
   }
-  
- /* if (door_check_enable == 1)
-       check_door();
-*/
 
-  if (wifiMulti.run() == WL_CONNECTED) {
+  // telnet connecton 
+  if (WiFi.status() == WL_CONNECTED) {
     //check if there are any new clients
     if (server.hasClient()){
       for(i = 0; i < MAX_SRV_CLIENTS; i++){
@@ -217,22 +387,23 @@ void loop() {
       }
     }
     //check clients for data
- /*
-    for(i = 0; i < MAX_SRV_CLIENTS; i++){
-      if (serverClients[i] && serverClients[i].connected()){
-        if(serverClients[i].available()){
-          //get data from the telnet client and push it to the UART
-          while(serverClients[i].available()) Serial2.write(serverClients[i].read());
-        }
-      }
-      else {
-        if (serverClients[i]) {
-          serverClients[i].stop();
-        }
-      }
-    }
-*/
-    }
+
+//    for(i = 0; i < MAX_SRV_CLIENTS; i++){
+//      if (serverClients[i] && serverClients[i].connected()){
+//       if(serverClients[i].available()){
+//          //get data from the telnet client and push it to the UART
+//          while(serverClients[i].available()) Serial2.write(serverClients[i].read());
+//        }
+//      }
+//      else {
+//        if (serverClients[i]) {
+//          serverClients[i].stop();
+//        }
+//      }
+//    }
+
+    } // if (wifiMulti.run() == WL_CONNECTED)
+
           
 }
 
@@ -294,12 +465,7 @@ void serialProc()
         if(serArray[0].equalsIgnoreCase("FW"))
         {
           // 텔넷으로 로그 출력
-          for(i = 0; i < MAX_SRV_CLIENTS; i++){
-            if (serverClients[i] && serverClients[i].connected()){
-              serverClients[i].write("Firmware update\r\n");
-              delay(1);
-            }
-          }
+          debuglog_telnet("Firmware update\r\n");
           ota();
           // report_to_server();   
         }
@@ -308,12 +474,8 @@ void serialProc()
         if(serArray[0].equalsIgnoreCase("BR"))
         {
           // 텔넷으로 로그 출력
-          for(i = 0; i < MAX_SRV_CLIENTS; i++){
-            if (serverClients[i] && serverClients[i].connected()){
-              serverClients[i].write("Board Read\r\n");
-              delay(1);
-            }
-          }
+
+          debuglog_telnet("Board read\r\n"); 
           report_to_server();   
         }
 
@@ -321,12 +483,8 @@ void serialProc()
         if(serArray[0].equalsIgnoreCase("UD"))
         {
           // 텔넷으로 로그 출력
-          for(i = 0; i < MAX_SRV_CLIENTS; i++){
-            if (serverClients[i] && serverClients[i].connected()){
-              serverClients[i].write("Unlock Door\r\n");
-              delay(1);
-            }
-          }   
+          debuglog_telnet("Unlock Door\r\n"); 
+       
           digitalWrite(SOL_LOCK1, HIGH); // unlock SOL_LOCK1
           digitalWrite(SOL_LOCK2, HIGH); // unlock SOL_LOCK2
           lock = '0';
@@ -338,12 +496,8 @@ void serialProc()
         if(serArray[0].equalsIgnoreCase("LD"))
         {
           // 텔넷으로 로그 출력
-          for(i = 0; i < MAX_SRV_CLIENTS; i++){
-            if (serverClients[i] && serverClients[i].connected()){
-              serverClients[i].write("Lock Door\r\n");
-              delay(1);
-            }
-          }   
+          debuglog_telnet("Lock Door\r\n"); 
+       
           digitalWrite(SOL_LOCK1, LOW); // lock SOL_LOCK1
           digitalWrite(SOL_LOCK2, LOW); // lock SOL_LOCK2
           lock = '1';
@@ -357,21 +511,16 @@ void serialProc()
           //명령 serArray[1] 숫자로 변경  - id 
           int speed = serArray[1].toInt();
           // 텔넷으로 로그 출력
-          for(i = 0; i < MAX_SRV_CLIENTS; i++){
-            if (serverClients[i] && serverClients[i].connected()){
-              serverClients[i].write("RFID Scanning...\r\n");
-              delay(1);
-            }
-          }   
-
-        scan = '1';
-        report_to_server();
-        
-   //    Rfid_Scanning(atoi(serArray[1]));
-        Rfid_Scanning();
-        
-        scan = '0';
-        report_to_server();               
+          
+  
+          scan = '1';
+          report_to_server();
+          debuglog_telnet("RFID Scanning...\r\n");
+   //     Rfid_Scanning(atoi(serArray[1]));
+          Rfid_Scanning();
+          debuglog_telnet("RFID Scanning is completed.\r\n");
+          scan = '0';
+          report_to_server();               
         }       
 
     
@@ -512,4 +661,67 @@ void check_door()
 
   } else
     door_check++;
+}
+
+void wifi_scan_connection()
+{
+  int mynetwork = 0;
+  int status = WL_IDLE_STATUS;
+  Serial.println("scan start");
+
+  // WiFi.scanNetworks will return the number of networks found
+  int n = WiFi.scanNetworks();
+  Serial.println("scan done");
+  if (n == 0) {
+      Serial.println("no networks found");
+  } else {
+    Serial.print(n);
+    Serial.println(" networks found");
+    
+    for (int i = 0; i < n; ++i) {
+      // Print SSID and RSSI for each network found
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i));
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i));
+      Serial.print(")");
+      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN)?" ":"*");
+      delay(10);
+      if(WiFi.SSID(i).substring(0,7) == "foodbox") {
+        mynetwork = i;  
+      }
+     }
+      // connect foodbox AP     
+      strcpy(ssid, WiFi.SSID(mynetwork).c_str());
+            
+      Serial.print("Connection to:");
+      Serial.print(ssid);
+      Serial.print("/");
+      Serial.println(password);
+      Serial.println(WiFi.SSID(mynetwork));
+          
+      status = WiFi.begin(ssid, password);
+      
+      Serial.print("Connecting to WiFi ..");
+      while (WiFi.status() != WL_CONNECTED) {
+        Serial.print('.');
+        delay(1000);
+      }
+      Serial.println(WiFi.localIP());
+
+  
+  }
+  Serial.println("");
+}
+
+void debuglog_telnet(char* msg) 
+{
+        uint8_t i;
+        for(i = 0; i < MAX_SRV_CLIENTS; i++){
+            if (serverClients[i] && serverClients[i].connected()){
+              serverClients[i].write(msg);
+              delay(1);
+            }
+          }
 }
