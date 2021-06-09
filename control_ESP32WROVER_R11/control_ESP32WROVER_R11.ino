@@ -509,17 +509,17 @@ void serialProc()
         else if(serArray[0].equalsIgnoreCase("RS"))
         {
           //명령 serArray[1] 숫자로 변경  - id 
-          int speed = serArray[1].toInt();
+         // int speed = serArray[1].toInt();
+          
           // 텔넷으로 로그 출력
           
   
           scan = '1';
           report_to_server();
-          debuglog_telnet("RFID Scanning...\r\n");
-   //     Rfid_Scanning(atoi(serArray[1]));
-          Rfid_Scanning();
-          debuglog_telnet("RFID Scanning is completed.\r\n");
-          scan = '0';
+          debuglog_telnet("RFID Scan\r\n");
+          Rfid_Scanning(serArray[1].toInt());
+       //   debuglog_telnet("RFID Scanning is completed.\r\n");
+       //   scan = '0';
           report_to_server();               
         }       
 
@@ -547,22 +547,27 @@ void report_to_server()
           SerialBT.write(total);
 }
 
-void Rfid_Scanning()
+void Rfid_Scanning(int speed)
 {
     digitalWrite(LED3_SCAN, LOW); // LED3 on
-  //  if(speed !=0 ) {  // first normal scanning
+    
+    unsigned long scanStartTime = millis();
+    
+    if(speed !=0 ) {  // first normal scanning
+      debuglog_telnet("   first normal scanning...\r\n");
       delay(2000);
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
       delay(10);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
-      while(digitalRead(TLIMIT) == HIGH);      // Top position?
+    //  while(digitalRead(TLIMIT) == HIGH);      // Top position?
+      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
        
         
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while(digitalRead(TLIMIT) == HIGH);      // Top position?
-    
+    //  while(digitalRead(TLIMIT) == HIGH);      // Top position?
+      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
         
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
@@ -571,51 +576,59 @@ void Rfid_Scanning()
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
 
    
-      while(digitalRead(BLIMIT) == HIGH); 
+    //  while(digitalRead(BLIMIT) == HIGH);
+      while((digitalRead(BLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Bottom position? 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
-  //  } 
-    /*
+    } 
     else {  // retrying scan in slow speed
-    
+      debuglog_telnet("   retrying scan in slow speed...\r\n");    
       delay(3000);      // wait 3s for operating RFID Reader
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
       delay(10);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
-      while(TLIMIT == HIGH);      // Top position?
+      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
 
 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while(TLIMIT == HIGH);      // Top position?
-
-      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
-      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while(TLIMIT == HIGH);      // Top position?
-
-      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
-      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while(TLIMIT == HIGH);      // Top position?
+      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
       
-      
+      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
+      delay(1000);
+      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
+      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+
+      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
+      delay(1000);
+      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
+      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+    
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, HIGH); // CCW(DOWN) direction
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
 
-      while(BLIMIT == HIGH); 
+      while((digitalRead(BLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Bottom position?
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction  
 
       digitalWrite(LED3_SCAN, HIGH); // LED3 off
     }
-    */
+    // operaton is succeed?   
+    if( (millis() - scanStartTime) <= 20000 ) {   // 20000 msec
+      scan = '0';
+      debuglog_telnet("RFID Scanning is completed.\r\n");  
+    } else
+    {
+      // scan = '1';
+      debuglog_telnet("Motor operation is fail!!\r\n");
+    }
+   
 }
 
 /* void chk_interrupt()
