@@ -8,11 +8,13 @@
 #include "BluetoothSerial.h"
 #include <HardwareSerial.h> 
 
+#include <esp_bt.h>
+
 #include <Arduino.h>
 #include <WiFi.h>
 // #include <WiFiMulti.h>
 
-// webserver
+// webserverd
 #include <WebServer.h>
 
 // HTTP OTA
@@ -24,7 +26,7 @@
 
 // OTA지원을 위한 버젼 관리
 String version="ctrl_esp32wrover_r01";
-String nextVersion="ctrl_esp32wrover_rxx.bin";
+String nextVersion="ctrl_esp32wrover_r02.bin";
 
 // WiFiMulti wifiMulti;
 
@@ -164,12 +166,13 @@ void check_door();
 
 
 // gpio 포트 선언
-int LED1_DOOR = 2, LED2_LOCK = 4, LED3_SCAN = 5;
-int TLIMIT = 12, BLIMIT = 14;
-// int 12VOUT_CUT = 18;
-int SOL_LOCK1 = 19, SOL_LOCK2 = 23;
-int AC_M_ON = 27, AC_M_FWD = 33;
-int DOOR_IN = 32;    // input
+const int LED1_DOOR = 15, LED2_LOCK = 4, LED3_SCAN = 5;    // default LED1_DOOR = 15,  old bd 2
+const int TLIMIT = 13, BLIMIT = 14;                       // default TLIMIT = 13, old bd 12
+// const int 12VOUT_CUT = 18;
+const int SOL_LOCK1 = 19, SOL_LOCK2 = 23;
+const int AC_M_ON = 27, AC_M_FWD = 33;
+const int DOOR_IN = 32;    // input
+
 
 // Timer 설정
 volatile bool interruptCounter=false;
@@ -189,7 +192,7 @@ void setup() {
   // interrupt_init
   timer = timerBegin(0, 80, true);    // 80MHz, division 80 = 1MHz
   timerAttachInterrupt(timer, &onTimer, true);  
-  timerAlarmWrite(timer, 100000, true);    // default 100ms, count 1000000 = 1sec, 1000=1msec
+  timerAlarmWrite(timer, 100000, true);    // default 100000 = 100ms, count 1000000 = 1sec, 1000=1msec
   timerAlarmEnable(timer);
 
   // gpio setup
@@ -208,7 +211,6 @@ void setup() {
 // gpio value default setup
   digitalWrite(AC_M_FWD, HIGH);
   digitalWrite(AC_M_ON, HIGH);
-
     
   // serial setup
   Serial.begin(115200);     // default 디버그용 시리얼
@@ -216,9 +218,21 @@ void setup() {
     
   SerialBT.begin("foodbox"); //Bluetooth device name  블루투스 시리얼 통신 선언
   Serial.println("The device started, now you can pair it with bluetooth!");
+  
+  esp_power_level_t min,max;  
+  esp_bredr_tx_power_set(ESP_PWR_LVL_P6, ESP_PWR_LVL_P9);   // +6 dbm ~ +9 dbm
+  delay(1000);
+  esp_bredr_tx_power_get(&min,&max);
+  Serial.printf("Tx power(index): min %d max %d\r\n",min,max);
+        
 
   // wifi setup - auto scan & connection
   // Set WiFi to station mode and disconnect from an AP if it was previously connected
+  Serial.print("Wating 30 seconds for booting foodbox AP..");
+  for(uint8_t i=0; i<30; i++) {
+        Serial.print('.');
+        delay(1000);
+  }
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
@@ -317,6 +331,10 @@ void setup() {
   Serial.println(" 23' to connect");
 
   ota();
+
+  // bluetooth tx_power_get
+  // esp_bredr_tx_power_get(&min,&max);
+  // Serial.printf("min %d max %d\r\n",min,max);
   
 }
 
@@ -328,7 +346,7 @@ void ota() {
   Serial.println(version);
 
   Serial.print("Target: ");
-  String updateAddr="http://192.168.0.27/"+nextVersion;
+  String updateAddr="http://www.topwave.co.kr/esp32/"+nextVersion;
   Serial.println(updateAddr);
   
   t_httpUpdate_return ret = httpUpdate.update(serverClients[0], updateAddr);
@@ -353,12 +371,11 @@ void ota() {
 
 void loop() {
   uint8_t i;
-
+ 
   // put your main code here, to run repeatedly:
   httpserver.handleClient();
   serialProc();
   
-
   if (interruptCounter) { 
         // Serial.println("100 msec");
         interruptCounter=false;
@@ -559,15 +576,15 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
       delay(10);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
-    //  while(digitalRead(TLIMIT) == HIGH);      // Top position?
-      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+    //  while(digitalRead(TLIMIT) == LOW);      // Top position?
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
        
         
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-    //  while(digitalRead(TLIMIT) == HIGH);      // Top position?
-      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+    //  while(digitalRead(TLIMIT) == LOW);      // Top position?
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
         
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
@@ -576,8 +593,8 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
 
    
-    //  while(digitalRead(BLIMIT) == HIGH);
-      while((digitalRead(BLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Bottom position? 
+    //  while(digitalRead(BLIMIT) == LOW);
+      while((digitalRead(BLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Bottom position? 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
@@ -588,23 +605,23 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
       delay(10);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
-      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
 
 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
       
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-      while((digitalRead(TLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
     
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
@@ -612,7 +629,7 @@ void Rfid_Scanning(int speed)
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
 
-      while((digitalRead(BLIMIT) == HIGH) && ((millis() - scanStartTime) < 20000 ));      // Bottom position?
+      while((digitalRead(BLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Bottom position?
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction  
@@ -712,7 +729,7 @@ void wifi_scan_connection()
       Serial.print(ssid);
       Serial.print("/");
       Serial.println(password);
-      Serial.println(WiFi.SSID(mynetwork));
+      // Serial.println(WiFi.SSID(mynetwork));
           
       status = WiFi.begin(ssid, password);
       
