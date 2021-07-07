@@ -9,6 +9,7 @@
 #include <HardwareSerial.h> 
 
 #include <esp_bt.h>
+#include <esp_bt_device.h>
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -44,8 +45,8 @@ const char* host = "foodbox";
 
 // telnet
 WiFiServer server(23);
-WiFiClient serverClients[MAX_SRV_CLIENTS];
 
+WiFiClient serverClients[MAX_SRV_CLIENTS];
 // http
 WebServer httpserver(80);
 
@@ -188,6 +189,9 @@ void wifi_scan_connection();
 // write to telnet
 void debuglog_telnet(char* msg);
 
+// bluetooth MAC
+void printDeviceAddress();
+
 void setup() {
   // interrupt_init
   timer = timerBegin(0, 80, true);    // 80MHz, division 80 = 1MHz
@@ -218,7 +222,8 @@ void setup() {
     
   SerialBT.begin("foodbox"); //Bluetooth device name  블루투스 시리얼 통신 선언
   Serial.println("The device started, now you can pair it with bluetooth!");
-  
+  printDeviceAddress();
+    
   esp_power_level_t min,max;  
   esp_bredr_tx_power_set(ESP_PWR_LVL_P6, ESP_PWR_LVL_P9);   // +6 dbm ~ +9 dbm
   delay(1000);
@@ -754,4 +759,23 @@ void debuglog_telnet(char* msg)
               delay(1);
             }
           }
+}
+
+void printDeviceAddress() {
+ 
+  const uint8_t* point = esp_bt_dev_get_address();
+ 
+  for (int i = 0; i < 6; i++) {
+ 
+    char str[3];
+ 
+    sprintf(str, "%02X", (int)point[i]);
+    Serial.print(str);
+ 
+    if (i < 5){
+      Serial.print(":");
+    }
+ 
+  }
+  Serial.println("");
 }

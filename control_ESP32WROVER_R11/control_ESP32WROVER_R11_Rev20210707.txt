@@ -1,7 +1,6 @@
 Firmware release
 2021.07.06 ctrl_esp32wrover_r01.bin 양산 100대(control_bd_rev1_2) 기준  gpio(LED1_DOOR = 15, TLIMIT = 13)  및 Tlimit, Blimit 관련 함수 변경
-
-
+2021.07.07 ctrl_esp32wrover_r01.bin 양산 100대, Bluetooth MAC 시리얼에 print	
 
 구현 기능
 1. 스마트 자판기 기본 기능 구현
