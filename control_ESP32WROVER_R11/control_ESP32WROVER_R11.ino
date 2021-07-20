@@ -26,8 +26,13 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="ctrl_esp32wrover_r01";
-String nextVersion="ctrl_esp32wrover_r02.bin";
+String version="ctrl_esp32wrover_r02";
+String nextVersion="ctrl_esp32wrover_r03.bin";
+
+
+unsigned long previousMillis = 0;
+unsigned long CheckTimeOTA = 300000;   // 5min
+// unsigned long CheckTimeOTA = 60000; // 60sec
 
 // WiFiMulti wifiMulti;
 
@@ -335,13 +340,10 @@ void setup() {
   Serial.print(WiFi.localIP());
   Serial.println(" 23' to connect");
 
+  // OTA
   ota();
-
-  // bluetooth tx_power_get
-  // esp_bredr_tx_power_get(&min,&max);
-  // Serial.printf("min %d max %d\r\n",min,max);
-  
-}
+ 
+}   // end of setup()
 
 void ota() {
   
@@ -379,8 +381,19 @@ void loop() {
  
   // put your main code here, to run repeatedly:
   httpserver.handleClient();
+
   serialProc();
-  
+
+  // OTA
+  unsigned long currentMillis = millis();
+  if((currentMillis - previousMillis) > CheckTimeOTA) {
+    previousMillis = currentMillis;
+    // Serial.print(currentMillis);
+    ota();
+  }
+
+
+  // door check routine. open? close?
   if (interruptCounter) { 
         // Serial.println("100 msec");
         interruptCounter=false;
@@ -588,15 +601,18 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
-    //  while(digitalRead(TLIMIT) == LOW);      // Top position?
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
-        
+
+      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
+      delay(1000);
+      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+  
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, HIGH); // CCW(DOWN) direction
       delay(1000);
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
-
    
     //  while(digitalRead(BLIMIT) == LOW);
       while((digitalRead(BLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Bottom position? 
@@ -750,7 +766,7 @@ void wifi_scan_connection()
   Serial.println("");
 }
 
-void debuglog_telnet(char* msg) 
+void debuglog_telnet(char* msg)
 {
         uint8_t i;
         for(i = 0; i < MAX_SRV_CLIENTS; i++){

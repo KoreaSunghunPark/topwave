@@ -1,6 +1,10 @@
 Firmware release
-2021.07.06 ctrl_esp32wrover_r01.bin 양산 100대(control_bd_rev1_2) 기준  gpio(LED1_DOOR = 15, TLIMIT = 13)  및 Tlimit, Blimit 관련 함수 변경
-2021.07.07 ctrl_esp32wrover_r01.bin 양산 100대, Bluetooth MAC 시리얼에 print	
+2021.07.06 	ctrl_esp32wrover_r01.bin 양산 100대(control_bd_rev1_2) 기준  gpio(LED1_DOOR = 15, TLIMIT = 13)  및 Tlimit, Blimit 관련 함수 변경
+2021.07.07 	ctrl_esp32wrover_r01.bin 양산 100대, Bluetooth MAC 시리얼에 print	
+2021.07.19 	ctrl_esp32wrover_r02.bin	모터 상승 기동 시, 상단 센서 총 3번 확인 후 내려오기(기존 2번에서 3번으로 변경).
+		http update(OTA) 5분마다 체크하여 업데이트 진행(기존에는 전원 인가 인가 시 OTA 체크 했음)
+
+
 
 구현 기능
 1. 스마트 자판기 기본 기능 구현
