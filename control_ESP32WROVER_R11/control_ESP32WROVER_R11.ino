@@ -26,8 +26,8 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="ctrl_esp32wrover_r02";
-String nextVersion="ctrl_esp32wrover_r03.bin";
+String version="ctrl_esp32wrover_r03";
+String nextVersion="ctrl_esp32wrover_r04.bin";
 
 
 unsigned long previousMillis = 0;
@@ -161,10 +161,15 @@ char scan='0';
 String serString="";
 String Txbuffer="";
 
-// int door_check_enable = 0;
 int close_check = 0;
 int open_check = 0;
 int door_check = 0;
+
+uint8_t motorDrivingCount=5;
+// unsigned long CheckTimeDoor = 60000;   // 1min
+unsigned long CheckTimeDoor = 300000;   // 5min
+unsigned long doorOpenMillis = 0;
+
 
 void serialProc();
 void chk_interrupt();
@@ -378,18 +383,28 @@ void ota() {
 
 void loop() {
   uint8_t i;
+  
  
   // put your main code here, to run repeatedly:
   httpserver.handleClient();
 
   serialProc();
 
-  // OTA
+  // OTA & motor driving for prevent freezing
   unsigned long currentMillis = millis();
-  if((currentMillis - previousMillis) > CheckTimeOTA) {
+  if((currentMillis - previousMillis) > CheckTimeOTA) {     // 5 minutes
     previousMillis = currentMillis;
-    // Serial.print(currentMillis);
     ota();
+     
+  // motor driving for prevent freezing
+    if(motorDrivingCount < 5) {
+      motorDrivingCount++;
+      // debuglog_telnet("motor driving for prevent freezing: ");
+    
+      Serial.print("motor driving for prevent freezing: ");
+      Serial.println(motorDrivingCount);
+      Rfid_Scanning(5);
+    }
   }
 
 
@@ -589,7 +604,8 @@ void Rfid_Scanning(int speed)
     unsigned long scanStartTime = millis();
     
     if(speed !=0 ) {  // first normal scanning
-      debuglog_telnet("   first normal scanning...\r\n");
+      Serial.println("   normal scanning...\r\n");
+      // debuglog_telnet("   normal scanning...\r\n");
       delay(2000);
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
       delay(10);
@@ -621,6 +637,7 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
     } 
     else {  // retrying scan in slow speed
+      Serial.println("   retrying scan in slow speed...\r\n");
       debuglog_telnet("   retrying scan in slow speed...\r\n");    
       delay(3000);      // wait 3s for operating RFID Reader
       digitalWrite(AC_M_FWD, LOW); // CW(UP) direction
@@ -660,11 +677,13 @@ void Rfid_Scanning(int speed)
     // operaton is succeed?   
     if( (millis() - scanStartTime) <= 20000 ) {   // 20000 msec
       scan = '0';
-      debuglog_telnet("RFID Scanning is completed.\r\n");  
+      Serial.println("RFID Scanning is completed.\r\n");
+      // debuglog_telnet("RFID Scanning is completed.\r\n");  
     } else
     {
       // scan = '1';
-      debuglog_telnet("Motor operation is fail!!\r\n");
+      Serial.println("Motor operation is fail!!\r\n");
+      // debuglog_telnet("Motor operation is fail!!\r\n");
     }
    
 }
@@ -696,16 +715,24 @@ void check_door()
         door = '0';
         report_to_server();
         Serial.println("Door is opened!\r\n");
-      }
-    }
+        // check current time when door is opend  
+        doorOpenMillis = millis();
+     }
+    } // end of open_check
     if (close_check > 3) {  //close
       digitalWrite(LED1_DOOR, LOW); // LED1 on
       if ( door == '0') {    // "0," == opened
         door = '1';
         report_to_server();
         Serial.println("Door is closed!\r\n");
+        // check how long door is opened?
+        unsigned long doorCloseMillis = millis();
+        if((doorCloseMillis - doorOpenMillis) > CheckTimeDoor) {     // over 5 minutes?
+          Serial.println("starting prevent freezing action!\r\n");
+          motorDrivingCount = 0;
+        }
       }
-    }
+    }  // end of close_check 
     door_check = 0;
     open_check = 0;
     close_check = 0;
