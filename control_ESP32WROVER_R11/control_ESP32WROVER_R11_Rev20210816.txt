@@ -3,7 +3,11 @@ Firmware release
 2021.07.07 	ctrl_esp32wrover_r01.bin 양산 100대, Bluetooth MAC 시리얼에 print	
 2021.07.19 	ctrl_esp32wrover_r02.bin	모터 상승 기동 시, 상단 센서 총 3번 확인 후 내려오기(기존 2번에서 3번으로 변경).
 		http update(OTA) 5분마다 체크하여 업데이트 진행(기존에는 전원 인가 인가 시 OTA 체크 했음)
-2121.07.26	ctrl_esp32wrover_r03.bin	모터 구동 장치 동결 방지 루틴 추가(문이 5분 이상 열린 직 후, 5분 간격으로 5회 구동)
+2021.07.26	ctrl_esp32wrover_r03.bin	모터 구동 장치 동결 방지 루틴 추가(문이 5분 이상 열린 직 후, 5분 간격으로 5회 구동)
+2021.08.13	void Rfid_Scanning(int speed) 함수에서 안테나 자유낙하 시간과 횟수를 기존 1초/3회 에서 0.5초/3회로 변경, rescan 루틴 0.5초/6회로 변경
+2021.08.16	ctrl_esp32wrover_r04.bin	bluetooth SSID를 버젼 이름과 동일하게 변경  --> 현재 버젼 정보를 앱 블루투스 정보에서 확인 가능
+2021.08.16	FBOX_R05.bin	위와 동일. 버젼 정보이름만 FBOX_Rxx 로 변경
+
 
 
 

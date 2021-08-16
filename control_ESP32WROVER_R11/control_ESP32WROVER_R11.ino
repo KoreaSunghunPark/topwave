@@ -26,9 +26,10 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="ctrl_esp32wrover_r03";
-String nextVersion="ctrl_esp32wrover_r04.bin";
-
+String version="FBOX_R05";
+String nextVersion="FBOX_R06.bin";
+// String version="ctrl_esp32wrover_r04";
+// String nextVersion="ctrl_esp32wrover_r05.bin";
 
 unsigned long previousMillis = 0;
 unsigned long CheckTimeOTA = 300000;   // 5min
@@ -230,7 +231,7 @@ void setup() {
   Serial.begin(115200);     // default 디버그용 시리얼
   bluetooth1.begin(115200, SERIAL_8N1, 21, 22); //추가로 사용할 시리얼. RX:21 / TX:22번 핀 사용
     
-  SerialBT.begin("foodbox"); //Bluetooth device name  블루투스 시리얼 통신 선언
+  SerialBT.begin(version); //Bluetooth device name  블루투스 시리얼 통신 선언
   Serial.println("The device started, now you can pair it with bluetooth!");
   printDeviceAddress();
     
@@ -612,18 +613,17 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
     //  while(digitalRead(TLIMIT) == LOW);      // Top position?
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
-       
-        
+               
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
+      delay(500);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
+      delay(500);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
-  
+
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
       delay(10);
       digitalWrite(AC_M_FWD, HIGH); // CCW(DOWN) direction
@@ -645,19 +645,28 @@ void Rfid_Scanning(int speed)
       digitalWrite(AC_M_ON, LOW); // AC Motor Power on
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
 
-
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
+      delay(500);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
       
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
+      delay(500);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
 
       digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
-      delay(1000);
+      delay(500);
+      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+
+      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
+      delay(500);
+      digitalWrite(AC_M_ON, LOW); // CW(UP) direction
+      while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
+
+      digitalWrite(AC_M_ON, HIGH); // AC Motor Power off
+      delay(500);
       digitalWrite(AC_M_ON, LOW); // CW(UP) direction
       while((digitalRead(TLIMIT) == LOW) && ((millis() - scanStartTime) < 20000 ));      // Top position?
     
