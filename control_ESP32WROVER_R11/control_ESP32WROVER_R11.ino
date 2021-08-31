@@ -26,8 +26,8 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="FBOX_R05";
-String nextVersion="FBOX_R06.bin";
+String version="FBOX_R06";
+String nextVersion="FBOX_R07.bin";
 // String version="ctrl_esp32wrover_r04";
 // String nextVersion="ctrl_esp32wrover_r05.bin";
 
@@ -776,14 +776,16 @@ void wifi_scan_connection()
       Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN)?" ":"*");
       delay(10);
       if(WiFi.SSID(i).substring(0,7) == "foodbox") {
-        mynetwork = i;  
+        mynetwork = i;
+        break;
       }
      }
       // connect foodbox AP     
-      strcpy(ssid, WiFi.SSID(mynetwork).c_str());
-            
+      strcpy(ssid, WiFi.SSID(mynetwork).c_str()); 
       Serial.print("Connection to:");
       Serial.print(ssid);
+      Serial.print("/");
+      Serial.print(WiFi.RSSI(mynetwork));
       Serial.print("/");
       Serial.println(password);
       // Serial.println(WiFi.SSID(mynetwork));

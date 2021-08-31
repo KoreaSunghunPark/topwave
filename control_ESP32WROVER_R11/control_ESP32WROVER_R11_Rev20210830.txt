@@ -7,6 +7,7 @@ Firmware release
 2021.08.13	void Rfid_Scanning(int speed) 함수에서 안테나 자유낙하 시간과 횟수를 기존 1초/3회 에서 0.5초/3회로 변경, rescan 루틴 0.5초/6회로 변경
 2021.08.16	ctrl_esp32wrover_r04.bin	bluetooth SSID를 버젼 이름과 동일하게 변경  --> 현재 버젼 정보를 앱 블루투스 정보에서 확인 가능
 2021.08.16	FBOX_R05.bin	위와 동일. 버젼 정보이름만 FBOX_Rxx 로 변경
+2021.08.30	FBOX_R06.bin	wifi 접속 시, 가장 낮은 신호 레벨의 AP로 접속하는 버그 수정 --> 가장 높은 신호 레벨 AP로 접속
 
 
 
