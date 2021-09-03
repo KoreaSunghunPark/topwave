@@ -26,14 +26,14 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="FBOX_R06";
-String nextVersion="FBOX_R07.bin";
+String version="FBOX_R07";
+String nextVersion="FBOX_R08.bin";
 // String version="ctrl_esp32wrover_r04";
 // String nextVersion="ctrl_esp32wrover_r05.bin";
 
 unsigned long previousMillis = 0;
 unsigned long CheckTimeOTA = 300000;   // 5min
-// unsigned long CheckTimeOTA = 60000; // 60sec
+//unsigned long CheckTimeOTA = 60000; // 60sec
 
 // WiFiMulti wifiMulti;
 
@@ -176,6 +176,8 @@ void serialProc();
 void chk_interrupt();
 void check_door(); 
 
+//bluetooth
+void callbackBT(esp_spp_cb_event_t event, esp_spp_cb_param_t *param);
 
 // gpio 포트 선언
 const int LED1_DOOR = 15, LED2_LOCK = 4, LED3_SCAN = 5;    // default LED1_DOOR = 15,  old bd 2
@@ -231,6 +233,7 @@ void setup() {
   Serial.begin(115200);     // default 디버그용 시리얼
   bluetooth1.begin(115200, SERIAL_8N1, 21, 22); //추가로 사용할 시리얼. RX:21 / TX:22번 핀 사용
     
+  SerialBT.register_callback(callbackBT);
   SerialBT.begin(version); //Bluetooth device name  블루투스 시리얼 통신 선언
   Serial.println("The device started, now you can pair it with bluetooth!");
   printDeviceAddress();
@@ -395,7 +398,7 @@ void loop() {
   unsigned long currentMillis = millis();
   if((currentMillis - previousMillis) > CheckTimeOTA) {     // 5 minutes
     previousMillis = currentMillis;
-    ota();
+      // ota();    //check update every 5 minutes
      
   // motor driving for prevent freezing
     if(motorDrivingCount < 5) {
@@ -832,4 +835,28 @@ void printDeviceAddress() {
  
   }
   Serial.println("");
+}
+
+void callbackBT(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
+
+  if(event == ESP_SPP_SRV_OPEN_EVT){
+    Serial.println("Bluetooth: client is connected. ESP_SPP_SRV_OPEN_EVT");       // client is connected
+    debuglog_telnet("Bluetooth: client is connected. ESP_SPP_SRV_OPEN_EVT"); 
+  } else if (event == ESP_SPP_CLOSE_EVT){
+    Serial.println("Bluetooth: client is disconnected. ESP_SPP_CLOSE_EVT");          // disconnectd
+    debuglog_telnet("Bluetooth: client is disconnected. ESP_SPP_CLOSE_EVT");
+  } else if (event == ESP_SPP_INIT_EVT){
+    Serial.println("Bluetooth: ESP_SPP_INIT_EVT");           // SPP INIT
+    debuglog_telnet("Bluetooth: ESP_SPP_INIT_EVT");
+  }  else if (event == ESP_SPP_DISCOVERY_COMP_EVT){
+    Serial.println("Bluetooth: ESP_SPP_DISCOVERY_COMP_EVT");
+  }  else if (event == ESP_SPP_OPEN_EVT){
+    Serial.println("Bluetooth: ESP_SPP_OPEN_EVT");
+  }  else if (event == ESP_SPP_START_EVT){
+    Serial.println("Bluetooth: listening_for_a_Bluetooth_device. ESP_SPP_START_EVT");        // create a SPP server and starts listening for a remote Bluetooth device
+    debuglog_telnet("Bluetooth: listening_for_a_Bluetooth_device. ESP_SPP_START_EVT");
+  }  else if (event == ESP_SPP_CL_INIT_EVT){
+    Serial.println("Bluetooth: ESP_SPP_CL_INIT_EVT");
+  }  
+  
 }

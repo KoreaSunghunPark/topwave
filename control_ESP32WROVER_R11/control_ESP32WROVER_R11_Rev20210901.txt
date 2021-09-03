@@ -8,6 +8,8 @@ Firmware release
 2021.08.16	ctrl_esp32wrover_r04.bin	bluetooth SSID를 버젼 이름과 동일하게 변경  --> 현재 버젼 정보를 앱 블루투스 정보에서 확인 가능
 2021.08.16	FBOX_R05.bin	위와 동일. 버젼 정보이름만 FBOX_Rxx 로 변경
 2021.08.30	FBOX_R06.bin	wifi 접속 시, 가장 낮은 신호 레벨의 AP로 접속하는 버그 수정 --> 가장 높은 신호 레벨 AP로 접속
+2021.09.01	FBOX_R07.bin	5분 주기 업데이트 체크 삭제(http update(OTA)) --> 전원 인가 인가 시에만 OTA 체크.
+				bluetooth callback 함수 추가. --> bluetooth status 디버깅 메세지 시리얼 출력	
 
 
 
