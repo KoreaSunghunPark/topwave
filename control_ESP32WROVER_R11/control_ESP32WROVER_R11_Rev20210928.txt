@@ -9,7 +9,13 @@ Firmware release
 2021.08.16	FBOX_R05.bin	위와 동일. 버젼 정보이름만 FBOX_Rxx 로 변경
 2021.08.30	FBOX_R06.bin	wifi 접속 시, 가장 낮은 신호 레벨의 AP로 접속하는 버그 수정 --> 가장 높은 신호 레벨 AP로 접속
 2021.09.01	FBOX_R07.bin	5분 주기 업데이트 체크 삭제(http update(OTA)) --> 전원 인가 인가 시에만 OTA 체크.
-				bluetooth callback 함수 추가. --> bluetooth status 디버깅 메세지 시리얼 출력	
+				bluetooth callback 함수 추가. --> bluetooth status 디버깅 메세지 시리얼 출력
+2021.09.28	FBOX_R08.bin	1. NTP 추가
+				2. 새벽 시간대(3:00 ~ 3:10)에 5분 간격으로 2회 OTA 실시
+				3. 부팅 시간 단축(wifi 접속 딜레이 삭제), wifi 재접속 관리 기능 추가
+				4. 블루투스 통신 응답 지연 유발 코드 정리
+				5. setup() 코드 정리
+	
 
 
 

@@ -26,14 +26,14 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="FBOX_R07";
-String nextVersion="FBOX_R08.bin";
+String version="FBOX_R08";
+String nextVersion="FBOX_R09.bin";
 // String version="ctrl_esp32wrover_r04";
 // String nextVersion="ctrl_esp32wrover_r05.bin";
 
 unsigned long previousMillis = 0;
 unsigned long CheckTimeOTA = 300000;   // 5min
-//unsigned long CheckTimeOTA = 60000; // 60sec
+// unsigned long CheckTimeOTA = 60000; // 60sec  test
 
 // WiFiMulti wifiMulti;
 
@@ -42,12 +42,16 @@ unsigned long CheckTimeOTA = 300000;   // 5min
 
 char* password = "33553355";
 char ssid[64];
+long rssi=0;
 // mdns
 const char* host = "foodbox";
-
 // const char* ssid = "topwave";
 // const char* password = "33553355";
 
+// ntp server
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 32400;   // GMT+9 -> 3600*9 = 32400
+const int   daylightOffset_sec = 0;    // summer time 3600
 
 // telnet
 WiFiServer server(23);
@@ -170,14 +174,20 @@ uint8_t motorDrivingCount=5;
 // unsigned long CheckTimeDoor = 60000;   // 1min
 unsigned long CheckTimeDoor = 300000;   // 5min
 unsigned long doorOpenMillis = 0;
+boolean initWifi = false;
 
 
 void serialProc();
 void chk_interrupt();
 void check_door(); 
+void ota();
 
 //bluetooth
 void callbackBT(esp_spp_cb_event_t event, esp_spp_cb_param_t *param);
+
+// NTP
+void printLocalTime();
+
 
 // gpio 포트 선언
 const int LED1_DOOR = 15, LED2_LOCK = 4, LED3_SCAN = 5;    // default LED1_DOOR = 15,  old bd 2
@@ -195,6 +205,21 @@ hw_timer_t *timer = NULL;
 void IRAM_ATTR onTimer() {
   interruptCounter=true;
   }
+
+// wifi setup - auto scan & connection
+
+/* const char* wl_status_to_string(wl_status_t status) {
+  switch (status) {
+    case WL_NO_SHIELD: return "WL_NO_SHIELD";
+    case WL_IDLE_STATUS: return "WL_IDLE_STATUS";
+    case WL_NO_SSID_AVAIL: return "WL_NO_SSID_AVAIL";
+    case WL_SCAN_COMPLETED: return "WL_SCAN_COMPLETED";
+    case WL_CONNECTED: return "WL_CONNECTED";
+    case WL_CONNECT_FAILED: return "WL_CONNECT_FAILED";
+    case WL_CONNECTION_LOST: return "WL_CONNECTION_LOST";
+    case WL_DISCONNECTED: return "WL_DISCONNECTED";
+  }
+} */
 
 // wifi setup - auto scan & connection
 void wifi_scan_connection();
@@ -243,72 +268,7 @@ void setup() {
   delay(1000);
   esp_bredr_tx_power_get(&min,&max);
   Serial.printf("Tx power(index): min %d max %d\r\n",min,max);
-        
-
-  // wifi setup - auto scan & connection
-  // Set WiFi to station mode and disconnect from an AP if it was previously connected
-  Serial.print("Wating 30 seconds for booting foodbox AP..");
-  for(uint8_t i=0; i<30; i++) {
-        Serial.print('.');
-        delay(1000);
-  }
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  delay(100);
-  Serial.println("Setup done");
-
-  wifi_scan_connection();   // foodbox AP에 자동 접속
-
-  
-  /*use mdns for host name resolution*/
-  if (!MDNS.begin(host)) { //http://foodbox.local
-    Serial.println("Error setting up MDNS responder!");
-    while (1) {
-      delay(1000);
-    }
-  }
-  
-  Serial.println("mDNS responder started");
-
-// http server(80)
- /*return index page which is stored in serverIndex */
-  httpserver.on("/", HTTP_GET, []() {
-    httpserver.sendHeader("Connection", "close");
-    httpserver.send(200, "text/html", loginIndex);
-  });
-  httpserver.on("/serverIndex", HTTP_GET, []() {
-    httpserver.sendHeader("Connection", "close");
-    httpserver.send(200, "text/html", serverIndex);
-  });
-  /*handling uploading firmware file */
-  httpserver.on("/update", HTTP_POST, []() {
-    httpserver.sendHeader("Connection", "close");
-    httpserver.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-    ESP.restart();
-  }, []() {
-    HTTPUpload& upload = httpserver.upload();
-    if (upload.status == UPLOAD_FILE_START) {
-      Serial.printf("Update: %s\n", upload.filename.c_str());
-      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
-        Update.printError(Serial);
-      }
-    } else if (upload.status == UPLOAD_FILE_WRITE) {
-      /* flashing firmware to ESP*/
-      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
-        Update.printError(Serial);
-      }
-    } else if (upload.status == UPLOAD_FILE_END) {
-      if (Update.end(true)) { //true to set the size to the current progress
-        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-      } else {
-        Update.printError(Serial);
-      }
-    }
-  });
-  httpserver.begin();
-  Serial.println("OTA Http WebUpdater is enabled!");
-
-  
+ 
 
 /*
 //  wifi setup - multi connection
@@ -340,66 +300,61 @@ void setup() {
   }
 */
 
-  //start UART and the server
-  // Serial2.begin(9600);
-  server.begin();
-  server.setNoDelay(true);
-
-  Serial.print("Ready! Use 'telnet ");
-  Serial.print(WiFi.localIP());
-  Serial.println(" 23' to connect");
-
-  // OTA
-  ota();
+  Serial.println("Setup done");
  
 }   // end of setup()
 
-void ota() {
-  
-  Serial.println("");
-  Serial.println("firmware version check for OTA");
-  Serial.print("Current version: ");   
-  Serial.println(version);
-
-  Serial.print("Target: ");
-  String updateAddr="http://www.topwave.co.kr/esp32/"+nextVersion;
-  Serial.println(updateAddr);
-  
-  t_httpUpdate_return ret = httpUpdate.update(serverClients[0], updateAddr);
-  // Or:
-  //t_httpUpdate_return ret = httpUpdate.update(client, "server", 80, "/file.bin");
-  
-    switch (ret) {
-      case HTTP_UPDATE_FAILED:
-        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-        break;
-
-      case HTTP_UPDATE_NO_UPDATES:
-        Serial.println("HTTP_UPDATE_NO_UPDATES");
-        break;
-
-      case HTTP_UPDATE_OK:
-        Serial.println("HTTP_UPDATE_OK");
-        break;
-    }
-  
-}
-
 void loop() {
   uint8_t i;
-  
- 
+   
   // put your main code here, to run repeatedly:
   httpserver.handleClient();
 
   serialProc();
 
-  // OTA & motor driving for prevent freezing
+  // init wifi & motor driving for prevent freezing
   unsigned long currentMillis = millis();
   if((currentMillis - previousMillis) > CheckTimeOTA) {     // 5 minutes
     previousMillis = currentMillis;
       // ota();    //check update every 5 minutes
-     
+ 
+  /*
+  if(!initWifi) {
+    Serial.println("init wifi");
+    wifi_scan_connection();
+    // initWifi = true;
+  }
+  */
+
+  if (WiFi.status() == WL_CONNECTED) {
+    struct tm timeinfo;
+    char tmptime[3];
+    if(getLocalTime(&timeinfo)) {
+      // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+      
+      int timeHour;
+      strftime(tmptime,3, "%H", &timeinfo);
+      timeHour = atoi(tmptime);
+      // Serial.println(timeHour);
+      
+      int timeMin;
+      strftime(tmptime,10, "%M", &timeinfo);
+      timeMin = atoi(tmptime);
+      // Serial.println(timeMin);
+      // Serial.println();
+  
+      if(timeHour==3 && timeMin < 10) {    // update time AM 3:00 ~ 3:10 test
+        Serial.println("time to updata!");
+        ota();
+      }
+    }
+  } else {
+    initWifi = false;
+    Serial.println("init wifi");
+    wifi_scan_connection();
+  }   // if (WiFi.status() == WL_CONNECTED) {
+  
+
   // motor driving for prevent freezing
     if(motorDrivingCount < 5) {
       motorDrivingCount++;
@@ -755,6 +710,21 @@ void check_door()
 
 void wifi_scan_connection()
 {
+  
+  // wifi setup - auto scan & connection
+  // Set WiFi to station mode and disconnect from an AP if it was previously connected
+  /*
+  Serial.print("Wating 30 seconds for booting foodbox AP..");
+  for(uint8_t i=0; i<30; i++) {
+        Serial.print('.');
+        delay(1000);
+  }
+  */
+  
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  delay(100);
+
   int mynetwork = 0;
   int status = WL_IDLE_STATUS;
   Serial.println("scan start");
@@ -785,27 +755,103 @@ void wifi_scan_connection()
      }
       // connect foodbox AP     
       strcpy(ssid, WiFi.SSID(mynetwork).c_str()); 
+      rssi = WiFi.RSSI(mynetwork);
       Serial.print("Connection to:");
       Serial.print(ssid);
       Serial.print("/");
-      Serial.print(WiFi.RSSI(mynetwork));
+      // Serial.print(WiFi.RSSI(mynetwork));
+      Serial.print(rssi);
       Serial.print("/");
       Serial.println(password);
       // Serial.println(WiFi.SSID(mynetwork));
           
       status = WiFi.begin(ssid, password);
       
-      Serial.print("Connecting to WiFi ..");
+      Serial.print("Connecting to WiFi ");
+      /*
       while (WiFi.status() != WL_CONNECTED) {
         Serial.print('.');
         delay(1000);
       }
-      Serial.println(WiFi.localIP());
-
+      */
+      
+      delay(3000);    // delay 3s
+      if (WiFi.status() == WL_CONNECTED) {
+        initWifi = true;
+        Serial.println(WiFi.localIP());
+      } else {
+        Serial.println("failed to conneciton");
+      }
   
   }
   Serial.println("");
-}
+
+  if(initWifi == true) {
+    /*use mdns for host name resolution*/
+    if (!MDNS.begin(host)) { //http://foodbox.local
+      Serial.println("Error setting up MDNS responder!");
+      while (1) {
+        delay(1000);
+      }
+    }
+    Serial.println("mDNS responder started");
+  
+    // http server(80)
+   /*return index page which is stored in serverIndex */
+    httpserver.on("/", HTTP_GET, []() {
+      httpserver.sendHeader("Connection", "close");
+      httpserver.send(200, "text/html", loginIndex);
+    });
+    httpserver.on("/serverIndex", HTTP_GET, []() {
+      httpserver.sendHeader("Connection", "close");
+      httpserver.send(200, "text/html", serverIndex);
+    });
+    /*handling uploading firmware file */
+    httpserver.on("/update", HTTP_POST, []() {
+      httpserver.sendHeader("Connection", "close");
+      httpserver.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+      ESP.restart();
+    }, []() {
+      HTTPUpload& upload = httpserver.upload();
+      if (upload.status == UPLOAD_FILE_START) {
+        Serial.printf("Update: %s\n", upload.filename.c_str());
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
+          Update.printError(Serial);
+        }
+      } else if (upload.status == UPLOAD_FILE_WRITE) {
+        /* flashing firmware to ESP*/
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+          Update.printError(Serial);
+        }
+      } else if (upload.status == UPLOAD_FILE_END) {
+        if (Update.end(true)) { //true to set the size to the current progress
+          Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+        } else {
+          Update.printError(Serial);
+        }
+      }
+    });
+    httpserver.begin();
+    Serial.println("OTA Http WebUpdater is enabled!");
+    
+    //start telnet server
+    server.begin();
+    server.setNoDelay(true);
+  
+    Serial.print("Ready! Use 'telnet ");
+    Serial.print(WiFi.localIP());
+    Serial.println(" 23' to connect");
+  
+    // ntp init
+    Serial.println("ntp init");
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    printLocalTime();
+
+    // ota
+    ota();
+    
+  } // if(initWifi == true)
+} // void wifi_scan_connection()
 
 void debuglog_telnet(char* msg)
 {
@@ -859,4 +905,47 @@ void callbackBT(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
     Serial.println("Bluetooth: ESP_SPP_CL_INIT_EVT");
   }  
   
+}
+
+
+void ota() {
+  
+  Serial.println("");
+  Serial.println("firmware version check for OTA");
+  Serial.print("Current version: ");
+  Serial.println(version);
+
+  Serial.print("Target: ");
+  String updateAddr="http://www.topwave.co.kr/esp32/"+nextVersion;      // test
+  Serial.println(updateAddr);
+  printLocalTime();
+  
+  t_httpUpdate_return ret = httpUpdate.update(serverClients[0], updateAddr);
+  // Or:
+  //t_httpUpdate_return ret = httpUpdate.update(client, "server", 80, "/file.bin");
+  
+    switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        Serial.printf("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Serial.println("HTTP_UPDATE_NO_UPDATES");
+        break;
+
+      case HTTP_UPDATE_OK:
+        Serial.println("HTTP_UPDATE_OK");
+        break;
+    }
+  
+}
+
+// ntp server
+void printLocalTime() {
+    struct tm timeinfo;
+    if(!getLocalTime(&timeinfo)) {
+        Serial.println("Failed to obtain time");
+        return;
+    }
+    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
