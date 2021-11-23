@@ -1,8 +1,5 @@
-//This example code is in the Public Domain (or CC0 licensed, at your option.)
-//By Evandro Copercini - 2018
-//
-//This example creates a bridge between Serial and Classical Bluetooth (SPP)
-//and also demonstrate that SerialBT have the same functionalities of a normal Serial
+// control_ESP32WROVER_R11
+// release version FBOX_R09
 
 
 #include "BluetoothSerial.h"
@@ -26,8 +23,8 @@
 #include <ESPmDNS.h>
 
 // OTA지원을 위한 버젼 관리
-String version="FBOX_R08";
-String nextVersion="FBOX_R09.bin";
+String version="FBOX_R09";
+String nextVersion="FBOX_R10.bin";
 // String version="ctrl_esp32wrover_r04";
 // String nextVersion="ctrl_esp32wrover_r05.bin";
 
@@ -492,12 +489,11 @@ void serialProc()
         if(serArray[0].equalsIgnoreCase("UD"))
         {
           // 텔넷으로 로그 출력
-          debuglog_telnet("Unlock Door\r\n"); 
-       
           digitalWrite(SOL_LOCK1, HIGH); // unlock SOL_LOCK1
           digitalWrite(SOL_LOCK2, HIGH); // unlock SOL_LOCK2
           lock = '0';
           digitalWrite(LED2_LOCK, HIGH); // LED2 off
+          debuglog_telnet("Unlock Door\r\n"); 
           report_to_server();
         }
 
@@ -505,12 +501,12 @@ void serialProc()
         if(serArray[0].equalsIgnoreCase("LD"))
         {
           // 텔넷으로 로그 출력
-          debuglog_telnet("Lock Door\r\n"); 
-       
+          delay(1000);
           digitalWrite(SOL_LOCK1, LOW); // lock SOL_LOCK1
           digitalWrite(SOL_LOCK2, LOW); // lock SOL_LOCK2
           lock = '1';
           digitalWrite(LED2_LOCK, LOW); // LED2 on
+          debuglog_telnet("Lock Door\r\n"); 
           report_to_server();
         }
         
@@ -521,14 +517,19 @@ void serialProc()
          // int speed = serArray[1].toInt();
           
           // 텔넷으로 로그 출력
-          
-  
           scan = '1';
           report_to_server();
           debuglog_telnet("RFID Scan\r\n");
           Rfid_Scanning(serArray[1].toInt());
        //   debuglog_telnet("RFID Scanning is completed.\r\n");
        //   scan = '0';
+        
+          /* test 20211115
+          for(int i=0; i<5; i++) {
+            check_door();
+            delay(100);
+          } */
+          
           report_to_server();               
         }       
 
@@ -706,6 +707,15 @@ void check_door()
 
   } else
     door_check++;
+    if((door == '0') && (lock == '1') && (scan == '0')) {
+      // auto unlock door
+      digitalWrite(SOL_LOCK1, HIGH); // unlock SOL_LOCK1
+      digitalWrite(SOL_LOCK2, HIGH); // unlock SOL_LOCK2
+      lock = '0';
+      digitalWrite(LED2_LOCK, HIGH); // LED2 off
+      debuglog_telnet("auto Unlock Door(01X)\r\n"); 
+      report_to_server();
+    }
 }
 
 void wifi_scan_connection()
@@ -855,13 +865,18 @@ void wifi_scan_connection()
 
 void debuglog_telnet(char* msg)
 {
-        uint8_t i;
-        for(i = 0; i < MAX_SRV_CLIENTS; i++){
-            if (serverClients[i] && serverClients[i].connected()){
-              serverClients[i].write(msg);
-              delay(1);
-            }
-          }
+    uint8_t i;
+    for(i = 0; i < MAX_SRV_CLIENTS; i++){
+        if (serverClients[i] && serverClients[i].connected()){
+          serverClients[i].write("(");
+          serverClients[i].write(door);
+          serverClients[i].write(lock);
+          serverClients[i].write(scan);
+          serverClients[i].write(")");
+          serverClients[i].write(msg);
+          delay(1);
+        }
+      }
 }
 
 void printDeviceAddress() {
@@ -916,7 +931,7 @@ void ota() {
   Serial.println(version);
 
   Serial.print("Target: ");
-  String updateAddr="http://www.topwave.co.kr/esp32/"+nextVersion;      // test
+  String updateAddr="http://www.topwave.co.kr/esp32/"+nextVersion;
   Serial.println(updateAddr);
   printLocalTime();
   
